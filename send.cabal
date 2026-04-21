@@ -43,6 +43,7 @@ test-suite tests
         base ^>=4.20.2.0,
         HUnit ^>=1.6,
         network-uri ^>=2.6.4.2,
+        raw-strings-qq ^>=1.1,
         send-lib
     hs-source-dirs: tests
     default-language: GHC2024
