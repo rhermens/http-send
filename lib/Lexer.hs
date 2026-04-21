@@ -10,3 +10,22 @@ scanTokens ('#' : rest) tok = scanTokens rest (Comment : tok)
 scanTokens (' ' : rest) tok = scanTokens rest (Whitespace : tok)
 scanTokens ('\n' : rest) tok = scanTokens rest (Newline : tok)
 scanTokens (t : rest) tok = scanTokens rest (Character t : tok)
+
+unwrapChar :: Token -> Maybe Char
+unwrapChar (Character c) = Just c
+unwrapChar _ = Nothing
+
+isNewline :: Token -> Bool
+isNewline token = case token of
+  Newline -> True
+  _ -> False
+
+isWhitespace :: Token -> Bool
+isWhitespace token = case token of
+  Whitespace -> True
+  _ -> False
+
+isComment :: Token -> Bool
+isComment token = case token of
+  Comment -> True
+  _ -> False
