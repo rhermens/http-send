@@ -32,10 +32,10 @@ data HeaderFieldExpression = HeaderFieldExpression
   }
   deriving (Show, Eq)
 
-data MessageStatement = String | InputFileRef String deriving (Show)
+data MessageStatement = InlineMessageStatement String | InputFileRef String deriving (Show)
 
 data MessageBodyExpression = MessageBodyExpression
-  { messages :: [MessageStatement]
+  { message :: MessageStatement
   }
   deriving (Show)
 
@@ -92,13 +92,16 @@ parseRequest tokens =
         (Just l) -> parseRequestLine l
         Nothing -> error "Missing request line",
       headers = map parseHeaderLine hl,
-      messageBody = MessageBodyExpression {messages = []}
+      messageBody = parseMessage b
     }
   where
     l = filter (\li -> length li > 0) (splitOnLineEnding tokens)
     rl = listToMaybe l
     hl = takeWhile (\li -> Character ':' `elem` li) (drop 1 l)
     b = drop (length hl + 1) l
+
+parseMessage :: [[Token]] -> MessageBodyExpression
+parseMessage tokens = MessageBodyExpression {message = InlineMessageStatement $ charsIntoString (concat tokens)}
 
 parseVersion :: [Token] -> String
 parseVersion tokens = charsIntoString tokens
