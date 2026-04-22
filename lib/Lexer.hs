@@ -13,7 +13,14 @@ scanTokens (t : rest) tok = scanTokens rest (Character t : tok)
 
 unwrapChar :: Token -> Maybe Char
 unwrapChar (Character c) = Just c
+unwrapChar Whitespace = Just ' '
 unwrapChar _ = Nothing
+
+charsIntoString :: [Token] -> String
+charsIntoString tokens =
+  case mapM unwrapChar tokens of
+    Just x -> x
+    _ -> error "Invalid character sequence"
 
 isNewline :: Token -> Bool
 isNewline token = case token of

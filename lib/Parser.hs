@@ -1,8 +1,10 @@
 module Parser where
 
+import Data.List (isInfixOf)
 import Data.List.Split (splitOn)
 import Data.Maybe (fromJust, listToMaybe)
-import Lexer (Token (Character, Newline, RequestSeperator, Whitespace), isComment, isNewline, isWhitespace, unwrapChar)
+import Debug.Trace (traceShow)
+import Lexer (Token (Character, Newline, RequestSeperator, Whitespace), charsIntoString, isComment, isNewline, isWhitespace, unwrapChar)
 import Network.URI (URI, parseURIReference, uriIsAbsolute)
 
 data Root = Root
@@ -12,6 +14,36 @@ data Root = Root
 
 data MethodStatement = Get | Post | Put | Patch | Delete | Head | Connect | Options | Trace
   deriving (Show, Eq)
+
+data TargetStatement = AbsoluteTarget URI | OriginTarget URI
+  deriving (Show)
+
+data RequestLineExpression = RequestLineExpression
+  { method :: MethodStatement,
+    target :: TargetStatement,
+    httpVersion :: String
+  }
+  deriving (Show)
+
+data HeaderFieldExpression = HeaderFieldExpression
+  { name :: String,
+    value :: String
+  }
+  deriving (Show, Eq)
+
+data MessageStatement = String | InputFileRef String deriving (Show)
+
+data MessageBodyExpression = MessageBodyExpression
+  { messages :: [MessageStatement]
+  }
+  deriving (Show)
+
+data RequestExpression = RequestExpression
+  { requestLine :: RequestLineExpression,
+    headers :: [HeaderFieldExpression],
+    messageBody :: MessageBodyExpression
+  }
+  deriving (Show)
 
 defaultGet :: [Token]
 defaultGet = [Character 'G', Character 'E', Character 'T']
@@ -33,22 +65,16 @@ parseMethod tokens =
     Just "TRACE" -> Trace
     _ -> error "Invalid method"
 
-parseVersion :: [Token] -> String
-parseVersion _ = "V1"
+trimStart :: [Token] -> [Token]
+trimStart tokens = case tokens of
+  (Whitespace : t) -> t
+  _ -> tokens
 
-data TargetStatement = AbsoluteTarget URI | OriginTarget URI
-  deriving (Show)
+trimEnd :: [Token] -> [Token]
+trimEnd tokens = reverse $ trimStart (reverse tokens)
 
-data RequestLineExpression = RequestLineExpression
-  { method :: MethodStatement,
-    target :: TargetStatement,
-    httpVersion :: String
-  }
-  deriving (Show)
-
-data RequestExpression = RequestExpression
-  {requestLineExpression :: RequestLineExpression}
-  deriving (Show)
+trimTokens :: [Token] -> [Token]
+trimTokens tokens = (trimStart . trimEnd) tokens
 
 parse :: [Token] -> Root
 parse tokens =
@@ -61,14 +87,37 @@ parse tokens =
 parseRequest :: [Token] -> RequestExpression
 parseRequest tokens =
   RequestExpression
-    { requestLineExpression = parseRequestLine (listToMaybe l)
+    { requestLine = case rl of
+        (Just l) -> parseRequestLine l
+        Nothing -> error "Missing request line",
+      headers = [],
+      messageBody = MessageBodyExpression {messages = []}
     }
   where
     l = filter (\li -> length li > 0) (splitOnLineEnding tokens)
+    rl = listToMaybe l
+    hl = takeWhile (\li -> Character ':' `elem` li) (drop 1 l)
+    b = drop (length hl + 1) l
 
-parseRequestLine :: Maybe [Token] -> RequestLineExpression
-parseRequestLine Nothing = error "Missing request line"
-parseRequestLine (Just tokens) = parseRequestLine_ expr
+parseVersion :: [Token] -> String
+parseVersion _ = "V1"
+
+parseHeaders :: [[Token]] -> [HeaderFieldExpression]
+parseHeaders lines = map parseHeaderLine lines
+
+parseHeaderLine :: [Token] -> HeaderFieldExpression
+parseHeaderLine line = case parts of
+  [name, value] ->
+    HeaderFieldExpression
+      { name = charsIntoString name,
+        value = charsIntoString $ trimTokens value
+      }
+  _ -> error "Invalid header"
+  where
+    parts = splitOn [(Character ':')] line
+
+parseRequestLine :: [Token] -> RequestLineExpression
+parseRequestLine tokens = parseRequestLine_ expr
   where
     expr = splitOn [Whitespace] tokens
 

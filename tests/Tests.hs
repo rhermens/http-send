@@ -5,14 +5,14 @@ module Main where
 import GHC.IO.Exception (ExitCode)
 import Lexer (Token (Character, Newline, RequestSeperator), scanTokens)
 import Network.URI (URI (URI, uriPath))
-import Parser (MethodStatement (Get, Post), RequestLineExpression (RequestLineExpression, httpVersion, method, target), TargetStatement (OriginTarget), parseRequestLine_, splitOnSeperator)
+import Parser (HeaderFieldExpression (HeaderFieldExpression, name, value), MethodStatement (Get, Post), RequestLineExpression (RequestLineExpression, httpVersion, method, target), TargetStatement (OriginTarget), parseHeaderLine, parseRequestLine, parseRequestLine_, splitOnSeperator)
 import System.Exit qualified as Exit
 import Test.HUnit (Assertable (assert), Counts (failures), Test (TestCase, TestLabel, TestList), Testable (test), assertEqual, runTestTT)
 import Text.RawString.QQ
 import Text.Read (Lexeme (Char))
 
-testParseRequestLine_ :: Test
-testParseRequestLine_ = TestCase (assertEqual "Should parse into request line" Post (method (parseRequestLine_ [[Character 'P', Character 'O', Character 'S', Character 'T'], [Character 'a']])))
+testParseRequestLine :: Test
+testParseRequestLine = TestCase (assertEqual "Should parse into request line" Post (method (parseRequestLine (scanTokens "POST http://test" []))))
 
 testSplitOnSeperator :: Test
 testSplitOnSeperator =
@@ -42,8 +42,11 @@ Content-Type: application/json
         )
     )
 
+testParseHeaderLine :: Test
+testParseHeaderLine = TestCase (assertEqual "Parsed header matches" HeaderFieldExpression {name = "Content-Type", value = "application/json"} (parseHeaderLine (scanTokens "Content-Type: application/json" [])))
+
 tests :: Test
-tests = TestList [TestLabel "testParseRequestLine_" testParseRequestLine_, TestLabel "testSplitOnSeperator" testSplitOnSeperator]
+tests = TestList [TestLabel "testParseRequestLine" testParseRequestLine, TestLabel "testSplitOnSeperator" testSplitOnSeperator, TestLabel "testParseHeaderLine" testParseHeaderLine]
 
 main :: IO ()
 main = do
