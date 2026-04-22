@@ -6,6 +6,7 @@ import Data.Maybe (fromJust, listToMaybe)
 import Debug.Trace (traceShow)
 import Lexer (Token (Character, Newline, RequestSeperator, Whitespace), charsIntoString, isComment, isNewline, isWhitespace, unwrapChar)
 import Network.URI (URI, parseURIReference, uriIsAbsolute)
+import Text.Read (Lexeme (Char))
 
 data Root = Root
   { requests :: [RequestExpression]
@@ -49,7 +50,7 @@ defaultGet :: [Token]
 defaultGet = [Character 'G', Character 'E', Character 'T']
 
 defaultVersion :: [Token]
-defaultVersion = [Character '1']
+defaultVersion = [Character 'H', Character 'T', Character 'T', Character 'P', Character '/', Character '1', Character '.', Character '1']
 
 parseMethod :: [Token] -> MethodStatement
 parseMethod tokens =
@@ -90,7 +91,7 @@ parseRequest tokens =
     { requestLine = case rl of
         (Just l) -> parseRequestLine l
         Nothing -> error "Missing request line",
-      headers = [],
+      headers = map parseHeaderLine hl,
       messageBody = MessageBodyExpression {messages = []}
     }
   where
@@ -100,7 +101,7 @@ parseRequest tokens =
     b = drop (length hl + 1) l
 
 parseVersion :: [Token] -> String
-parseVersion _ = "V1"
+parseVersion tokens = charsIntoString tokens
 
 parseHeaders :: [[Token]] -> [HeaderFieldExpression]
 parseHeaders lines = map parseHeaderLine lines
