@@ -1,7 +1,7 @@
 module Lexer where
 
 data Token = RequestSeperator | Comment | Whitespace | Newline | Character Char
-  deriving (Show, Eq)
+  deriving (Eq)
 
 scanTokens :: String -> [Token] -> [Token]
 scanTokens "" tok = reverse tok
@@ -11,17 +11,13 @@ scanTokens (' ' : rest) tok = scanTokens rest (Whitespace : tok)
 scanTokens ('\n' : rest) tok = scanTokens rest (Newline : tok)
 scanTokens (t : rest) tok = scanTokens rest (Character t : tok)
 
-unwrapChar :: Token -> Maybe Char
-unwrapChar (Character c) = Just c
-unwrapChar Whitespace = Just ' '
-unwrapChar Newline = Just '\n'
-unwrapChar _ = Nothing
-
-charsIntoString :: [Token] -> String
-charsIntoString tokens =
-  case mapM unwrapChar tokens of
-    Just x -> x
-    _ -> ""
+unlex :: [Token] -> String
+unlex tokens = concatMap tokenToString tokens
+  where
+    tokenToString (Character c) = [c]
+    tokenToString (Whitespace) = " "
+    tokenToString (Newline) = "\n"
+    tokenToString _ = ""
 
 isNewline :: Token -> Bool
 isNewline token = case token of

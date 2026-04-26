@@ -19,10 +19,13 @@ library send-lib
     exposed-modules:
         Lexer
         Parser
+        Client
     build-depends:
         base ^>=4.20.2.0,
         split ^>=0.2.5,
-        network-uri ^>=2.6.4.2
+        network-uri ^>=2.6.4.2,
+        http-conduit ^>=2.3.9.1,
+        bytestring ^>=0.12.2.0
     hs-source-dirs:   lib
     default-language: GHC2024
 
@@ -39,6 +42,8 @@ executable send
 test-suite tests
     type: exitcode-stdio-1.0
     main-is: Tests.hs
+    other-modules:
+        LexerTests
     build-depends:
         base ^>=4.20.2.0,
         HUnit ^>=1.6,

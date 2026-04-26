@@ -1,10 +1,11 @@
 module Parser where
 
+import Data.Data (Data (toConstr), Typeable, showConstr)
 import Data.List (isInfixOf)
 import Data.List.Split (splitOn)
 import Data.Maybe (fromJust, listToMaybe)
 import Debug.Trace (traceShow)
-import Lexer (Token (Character, Newline, RequestSeperator, Whitespace), charsIntoString, isComment, isNewline, isWhitespace, unwrapChar)
+import Lexer (Token (Character, Newline, RequestSeperator, Whitespace), isComment, isNewline, isWhitespace, unlex)
 import Network.URI (URI, parseURIReference, uriIsAbsolute)
 import Text.Read (Lexeme (Char))
 
@@ -14,7 +15,7 @@ data Root = Root
   deriving (Show)
 
 data MethodStatement = Get | Post | Put | Patch | Delete | Head | Connect | Options | Trace
-  deriving (Show, Eq)
+  deriving (Show, Eq, Typeable)
 
 data TargetStatement = AbsoluteTarget URI | OriginTarget URI
   deriving (Show)
@@ -54,16 +55,16 @@ defaultVersion = [Character 'H', Character 'T', Character 'T', Character 'P', Ch
 
 parseMethod :: [Token] -> MethodStatement
 parseMethod tokens =
-  case mapM unwrapChar tokens of
-    Just "GET" -> Get
-    Just "POST" -> Post
-    Just "PUT" -> Put
-    Just "PATCH" -> Patch
-    Just "DELETE" -> Delete
-    Just "HEAD" -> Head
-    Just "CONNECT" -> Connect
-    Just "OPTIONS" -> Options
-    Just "TRACE" -> Trace
+  case unlex tokens of
+    "GET" -> Get
+    "POST" -> Post
+    "PUT" -> Put
+    "PATCH" -> Patch
+    "DELETE" -> Delete
+    "HEAD" -> Head
+    "CONNECT" -> Connect
+    "OPTIONS" -> Options
+    "TRACE" -> Trace
     _ -> error "Invalid method"
 
 trimStart :: [Token] -> [Token]
@@ -101,10 +102,10 @@ parseRequest tokens =
     b = drop (length hl + 1) l
 
 parseMessage :: [[Token]] -> MessageBodyExpression
-parseMessage tokens = MessageBodyExpression {message = InlineMessageStatement $ charsIntoString (concat tokens)}
+parseMessage tokens = MessageBodyExpression {message = InlineMessageStatement $ unlex (concat tokens)}
 
 parseVersion :: [Token] -> String
-parseVersion tokens = charsIntoString tokens
+parseVersion tokens = unlex tokens
 
 parseHeaders :: [[Token]] -> [HeaderFieldExpression]
 parseHeaders lines = map parseHeaderLine lines
@@ -113,8 +114,8 @@ parseHeaderLine :: [Token] -> HeaderFieldExpression
 parseHeaderLine line = case parts of
   [name, value] ->
     HeaderFieldExpression
-      { name = charsIntoString name,
-        value = charsIntoString $ trimTokens value
+      { name = unlex name,
+        value = unlex $ trimTokens value
       }
   _ -> error "Invalid header"
   where
@@ -135,9 +136,7 @@ parseRequestLine_ [mTok, uTok, vTok] =
       httpVersion = parseVersion vTok
     }
   where
-    u = case mapM unwrapChar uTok of
-      Just str -> fromJust (parseURIReference str)
-      Nothing -> error "Parse error: Invalid characters in url"
+    u = fromJust $ parseURIReference (unlex uTok)
 parseRequestLine_ [mTok, uTok] = parseRequestLine_ [mTok, uTok, defaultVersion]
 parseRequestLine_ [uTok] = parseRequestLine_ [defaultGet, uTok, defaultVersion]
 parseRequestLine_ _ = error "Invalid length"
@@ -150,3 +149,14 @@ splitOnLineEnding tokens = splitOn [Newline] tokens
 
 isEmptyRequestBlock :: [Token] -> Bool
 isEmptyRequestBlock tokens = not (all (\t -> isNewline t || isWhitespace t || isComment t) tokens)
+
+methodStatementToString :: MethodStatement -> String
+methodStatementToString (Get) = "GET"
+methodStatementToString (Post) = "POST"
+methodStatementToString (Put) = "PUT"
+methodStatementToString (Patch) = "PATCH"
+methodStatementToString (Delete) = "DELETE"
+methodStatementToString (Head) = "HEAD"
+methodStatementToString (Connect) = "CONNECT"
+methodStatementToString (Options) = "OPTIONS"
+methodStatementToString (Trace) = "TRACE"

@@ -1,8 +1,9 @@
 module Main where
 
+import Client (send)
 import Lexer (scanTokens)
 import Options.Applicative (Parser, argument, execParser, helper, info, metavar, progDesc, str, (<**>))
-import Parser (parse)
+import Parser (RequestExpression, Root (requests), parse)
 import System.IO (IOMode (ReadMode), hGetContents, withFile)
 
 data Args = Args
@@ -30,5 +31,10 @@ run a =
     ( \hdl -> do
         contents <- hGetContents hdl
         let tokens = scanTokens contents []
-        print (parse tokens)
+        let root = parse tokens
+        run_ $ requests root
     )
+
+run_ :: [RequestExpression] -> IO ()
+run_ (r : _) = send r
+run_ _ = error "No requests"

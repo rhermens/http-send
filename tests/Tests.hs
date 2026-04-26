@@ -4,6 +4,7 @@ module Main where
 
 import GHC.IO.Exception (ExitCode)
 import Lexer (Token (Character, Newline, RequestSeperator), scanTokens)
+import LexerTests (lexerTests)
 import Network.URI (URI (URI, uriPath))
 import Parser (HeaderFieldExpression (HeaderFieldExpression, name, value), MethodStatement (Get, Post), RequestLineExpression (RequestLineExpression, httpVersion, method, target), TargetStatement (OriginTarget), parseHeaderLine, parseRequestLine, parseRequestLine_, splitOnSeperator)
 import System.Exit qualified as Exit
@@ -45,8 +46,11 @@ Content-Type: application/json
 testParseHeaderLine :: Test
 testParseHeaderLine = TestCase (assertEqual "Parsed header matches" HeaderFieldExpression {name = "Content-Type", value = "application/json"} (parseHeaderLine (scanTokens "Content-Type: application/json" [])))
 
+parseTests :: Test
+parseTests = TestList [TestLabel "testParseRequestLine" testParseRequestLine, TestLabel "testSplitOnSeperator" testSplitOnSeperator, TestLabel "testParseHeaderLine" testParseHeaderLine]
+
 tests :: Test
-tests = TestList [TestLabel "testParseRequestLine" testParseRequestLine, TestLabel "testSplitOnSeperator" testSplitOnSeperator, TestLabel "testParseHeaderLine" testParseHeaderLine]
+tests = TestList [parseTests, lexerTests]
 
 main :: IO ()
 main = do
